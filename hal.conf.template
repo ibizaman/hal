@@ -1,0 +1,4 @@
+{
+  "mailgun_domain": "my.domain.com",
+  "mailgun_api_key": "key-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+}

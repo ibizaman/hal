@@ -1,35 +1,99 @@
 defmodule Config do
-  @spec load_config(atom, Path | [Path]) :: {:ok, Map} | {:error, String}
-  def load_config(app, paths) when is_list(paths) do
-    return_first(paths, &load_config(app, &1))
+  use Application
+
+  def start(_type, _args) do
+    Config.Supervisor.start_link()
   end
 
-  def load_config(app, path) do
-    case File.read(Path.expand(path)) do
-      {:ok, json} ->
-        case Poison.decode(json) do
-          {:ok, config} ->
-            Enum.map(config, fn {key, value} ->
-              Application.put_env(app, key, value)
-            end)
-            {:ok, config}
-          error -> error
+  def watch_config(internal_path, callback) do
+    Config.Worker.watch_config(internal_path, callback)
+  end
+end
+
+
+defmodule Config.Supervisor do
+  use Supervisor
+
+  def start_link() do
+    Supervisor.start_link(__MODULE__, nil)
+  end
+
+  def init(nil) do
+    children = [
+      supervisor(FileWatcher, []),
+      worker(Config.Worker, [Application.get_env(:config, :config_paths)]),
+    ]
+
+    supervise(children, strategy: :rest_for_one)
+  end
+end
+
+
+defmodule Config.Worker do
+  use GenServer
+  import Logger
+
+  def start_link(config_paths) do
+    GenServer.start_link(__MODULE__, config_paths, name: __MODULE__)
+  end
+
+  def watch_config(internal_path, callback) do
+    GenServer.call(__MODULE__, {:add_listener, internal_path, callback})
+  end
+
+
+  def init(config_paths) do
+    config_paths = Enum.map(config_paths, &Path.expand/1)
+    config = merge_configs(config_paths)
+    :ok = watch_files(config_paths)
+    {:ok, %{config: config,
+            config_paths: config_paths,
+            listeners: [],
+            watcher_ports: []}}
+  end
+
+  def handle_call({:add_listener, internal_path, callback}, _from, state) do
+    state = Map.update!(state, :listeners, fn
+       listeners -> listeners ++ [{internal_path, callback}]
+    end)
+    {:reply, get_in(state.config, internal_path), state}
+  end
+
+  def handle_cast({:reload, _path}, state) do
+    case merge_configs(state.config_paths) do
+      map when map == %{} -> {:noreply, state}
+      new_config ->
+        for {internal_path, callback} <- state.listeners do
+          if get_in(state.config, internal_path) != get_in(new_config, internal_path) do
+            callback.(get_in(new_config, internal_path))
+          end
         end
-      error -> error
+        {:noreply, state |> Map.put(:config, new_config)}
     end
   end
 
 
-  defp return_first(list, fun, last_error \\ nil)
-
-  defp return_first([], _fun, last_error) do
-    last_error
+  defp watch_files(files) do
+    FileWatcher.watch_files(files, fn path -> GenServer.cast(__MODULE__, {:reload, path}) end)
+    :ok
   end
 
-  defp return_first([arg | rest], fun, _last_error) do
-    case fun.(arg) do
-      {:ok, result} -> {:ok, result}
-      error -> return_first(rest, fun, error)
+  defp merge_configs(paths) do
+    Enum.reduce(paths, %{}, fn
+      path, all -> Map.merge(all, try_load_config(path))
+    end)
+  end
+
+  defp try_load_config(path) do
+    case File.read(Path.expand(path)) do
+      {:ok, json} ->
+        case Poison.decode(json) do
+          {:ok, config} -> config
+          {:error, reason} ->
+            Logger.warn("File #{path} is not well-formed json, did not use it for config.\nError: #{inspect reason}")
+            %{}
+        end
+      _ -> %{}
     end
   end
 end

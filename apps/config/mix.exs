@@ -15,10 +15,13 @@ defmodule Config.Mixfile do
   end
 
   def application do
-    [applications: [:logger]]
+    [applications: [:logger],
+     mod: {Config, []}]
   end
 
   defp deps do
-    []
+    [
+      {:poison, "~> 2.0"},
+    ]
   end
 end

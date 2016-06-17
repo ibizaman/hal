@@ -15,7 +15,7 @@ defmodule Alert.Mixfile do
   end
 
   def application do
-    [applications: [:httpoison, :poolboy],
+    [applications: [:config, :httpoison, :poolboy],
      mod: {Alert, []}]
   end
 

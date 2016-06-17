@@ -2,7 +2,6 @@ defmodule Alert do
   use Application
 
   def start(_type, _args) do
-    {:ok, _} = Config.load_config(:alert, Application.get_env(:hal, :config_paths))
     Alert.Supervisor.start_link()
   end
 end

@@ -14,17 +14,11 @@ defmodule Alert.Services.Mailgun do
     ]
 
     children = [
-      :poolboy.child_spec(:mailgun_pool, poolboy_config, {
-        Application.get_env(:alert, "mailgun_domain"),
-        Application.get_env(:alert, "mailgun_api_key")
-      })
+      worker(Alert.Services.Mailgun.Config, []),
+      :poolboy.child_spec(:mailgun_pool, poolboy_config, nil)
     ]
 
-    options = [
-      strategy: :one_for_one,
-    ]
-
-    supervise(children, options)
+    supervise(children, strategy: :one_for_one)
   end
 
   def send_email(email = %Alert.Email{}, test \\ false) do
@@ -40,13 +34,30 @@ defmodule Alert.Services.Mailgun do
 end
 
 
+defmodule Alert.Services.Mailgun.Config do
+  def start_link() do
+    config = Config.watch_config(["alert", "mailgun"], &handle_config_change/1)
+    Agent.start_link(fn -> config end, name: __MODULE__)
+  end
+
+  def get(key) when not is_list(key) do
+    get([key])
+  end
+  def get(key) do
+    Agent.get(__MODULE__, fn map -> get_in(map, key) end)
+  end
+
+  def handle_config_change(map) do
+    Agent.update(__MODULE__, fn _ -> map end)
+  end
+end
+
+
 defmodule Alert.Services.Mailgun.Worker do
   use GenServer
 
-  defstruct [:url, :auth]
-
-  def start_link({domain, api_key}) do
-    GenServer.start_link(__MODULE__, {domain, api_key}, [])
+  def start_link(nil) do
+    GenServer.start_link(__MODULE__, nil, [])
   end
 
   def send_email(pid, email = %Alert.Email{}, test \\ false) do
@@ -54,19 +65,22 @@ defmodule Alert.Services.Mailgun.Worker do
   end
 
 
-  def init({domain, api_key}) do
-    url = "https://api.mailgun.net/v3/" <> domain
-    auth = [basic_auth: {"api", api_key}]
-    {:ok, %__MODULE__{url: url, auth: auth}}
+  defp url() do
+    "https://api.mailgun.net/v3/"
+    <> Alert.Services.Mailgun.Config.get("domain")
+  end
+
+  defp auth() do
+    {"api", Alert.Services.Mailgun.Config.get("api_key")}
   end
 
   def handle_call({:send, email, test}, _from, state) do
     email = email |> Map.put(:test, (case test, do: (true -> "yes"; false -> "no")))
     case HTTPoison.post(
-      state.url <> "/messages",
+      url <> "/messages",
       {:form, encode_email(email)},
       %{"Content-type" => "application/x-www-form-urlencoded"},
-      [hackney: state.auth])
+      [hackney: [basic_auth: auth]])
     do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
         {:reply, {:ok, body |> decode_success_response}, state}

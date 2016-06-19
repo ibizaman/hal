@@ -1,4 +1,8 @@
 use Mix.Config
 
 config :alert,
-  mailgun_config_path: ["alert", "mailgun"]
+  rules_config_path: ["alert", "rules"],
+  mailgun_config_path: ["alert", "mailgun"],
+  services: %{
+    "email" => Alert.Email,
+    "mailgun" => Alert.Services.Mailgun}

@@ -1,8 +1,28 @@
 {
   "alert": {
+    "rules": [
+      {"tag": "network",
+       "services": [
+        {"service": "email",
+         "from": "fallback@my.domain.com",
+         "to": "me@my.domain.com"}
+       ]},
+      {"tag": "fallback",
+       "services": [
+        {"service": "email",
+         "from": "fallback@my.domain.com",
+         "to": "me@my.domain.com"}
+       ]}
+    ],
     "mailgun": {
       "mailgun_domain": "my.domain.com",
       "mailgun_api_key": "key-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    }
+  },
+  "network": {
+    "dyndns": {
+      "check_interval": 10000,
+      "streak_error_alert": 10
     }
   }
 }

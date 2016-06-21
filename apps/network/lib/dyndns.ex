@@ -61,6 +61,7 @@ defmodule Network.Dyndns.Worker do
     case ip == state.ip do
       true -> state
       false ->
+        Network.Services.Godaddy.update_ip(ip)
         alert_ip_change(state.ip, ip)
         Map.put(state, :ip, ip)
     end

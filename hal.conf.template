@@ -23,6 +23,11 @@
     "dyndns": {
       "check_interval": 10000,
       "streak_error_alert": 10
+    },
+    "godaddy": {
+      "domain": "my.domain.com",
+      "key": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+      "secret": "XXXXXXXXXXXXXXXXXXXXX"
     }
   }
 }

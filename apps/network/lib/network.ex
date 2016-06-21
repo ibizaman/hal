@@ -15,6 +15,7 @@ defmodule Network.Supervisor do
 
   def init(nil) do
     children = [
+      supervisor(Network.Services.Godaddy, []),
       supervisor(Network.Dyndns, []),
     ]
 

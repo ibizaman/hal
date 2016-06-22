@@ -95,12 +95,16 @@ defmodule Network.Dyndns.Worker do
 
 
   defp alert_ip_change(nil, new_ip) do
+    new_ip = new_ip |> :inet.ntoa |> List.to_string
+
     Alert.alert([:network, :dyndns, :success, :change],
       %{new_ip: new_ip, old_ip: nil,
         summary: "New ip: #{new_ip}",
         message: "Starting with ip address #{new_ip}"})
   end
   defp alert_ip_change(old_ip, new_ip) do
+    new_ip = new_ip |> :inet.ntoa |> List.to_string
+
     Alert.alert([:network, :dyndns, :success, :change],
       %{new_ip: new_ip, old_ip: old_ip,
         summary: "New ip: #{new_ip}",

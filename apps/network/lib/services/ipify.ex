@@ -1,6 +1,6 @@
 defmodule Network.Services.Ipify do
   def url do
-    'https://api.ipify.org?format=json'
+    'https://api.ipify.org'
   end
 
   def get_ip() do
@@ -15,9 +15,9 @@ defmodule Network.Services.Ipify do
   end
 
   defp decode_success_response(response) do
-    response
-    |> Poison.decode!
-    |> Map.get("ip")
-    |> :inet.parse_ipv4strict_address
+    {:ok, ip} = response
+                |> String.to_charlist
+                |> :inet.parse_ipv4strict_address
+    ip
   end
 end

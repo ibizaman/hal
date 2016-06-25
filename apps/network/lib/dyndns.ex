@@ -104,6 +104,7 @@ defmodule Network.Dyndns.Worker do
   end
   defp alert_ip_change(old_ip, new_ip) do
     new_ip = new_ip |> :inet.ntoa |> List.to_string
+    old_ip = old_ip |> :inet.ntoa |> List.to_string
 
     Alert.alert([:network, :dyndns, :success, :change],
       %{new_ip: new_ip, old_ip: old_ip,

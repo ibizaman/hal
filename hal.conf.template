@@ -3,12 +3,14 @@
     "rules": [
       {"tag": "network",
        "services": [
+        {"service": "log"},
         {"service": "email",
          "from": "fallback@my.domain.com",
          "to": "me@my.domain.com"}
        ]},
       {"tag": "fallback",
        "services": [
+        {"service": "log"},
         {"service": "email",
          "from": "fallback@my.domain.com",
          "to": "me@my.domain.com"}

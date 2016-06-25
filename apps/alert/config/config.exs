@@ -5,4 +5,5 @@ config :alert,
   mailgun_config_path: ["alert", "mailgun"],
   services: %{
     "email" => Alert.Email,
+    "log" => Alert.Log,
     "mailgun" => Alert.Services.Mailgun}

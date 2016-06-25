@@ -7,7 +7,6 @@ defmodule Alert do
   end
 
   def alert(tags, data) do
-    Logger.debug(inspect({tags, data}))
     Alert.Supervisor.alert(tags, data)
   end
 end

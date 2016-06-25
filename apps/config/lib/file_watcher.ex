@@ -39,44 +39,44 @@ defmodule FileWatcher.Watcher do
   end
 
   def init({paths, callback}) do
-    exec = {:spawn_executable, Application.get_env(:config, :filewatcher_exec)}
-    args = ["--format=%p%0%f", "--event-flag-separator=," | paths]
-    options = [
-      {:args, args},
-      {:line, 1000},
-      {:env, [{'LD_LIBRARY_PATH', Application.get_env(:config, :filewatcher_sharelib) |> String.to_char_list}]},
-      :use_stdio]
+    args = [Application.get_env(:config, :filewatcher_exec),
+            "--format=%p%0%f",
+            "--event-flag-separator=,"
+            | paths]
+          |> Enum.join(" ")
+          |> String.to_char_list
+    options = [:stdout,
+               :stderr,
+               env: [{'LD_LIBRARY_PATH', Application.get_env(:config, :filewatcher_sharelib) |> String.to_char_list}]]
 
-    case Port.open(exec, options) do
-      nil -> {:stop, "Could not open port to watch files #{inspect paths}"}
-      port -> {:ok, %{paths: paths, callback: callback, port: port}}
+    case :exec.run_link(args, options) do
+      {:ok, _pid, _ospid} -> {:ok, %{paths: paths, callback: callback}}
+      {:error, reason} -> {:stop, "Could not watch files #{inspect paths}: #{inspect reason}"}
     end
   end
 
-  def handle_info({'EXIT', _port, posix_code}, state) do
-    Logger.error("Port closed with error code #{inspect posix_code}")
-    {:stop, :port_already_closed, state}
+
+  def handle_info({:stdout, _pid, data}, state) do
+    for line <- String.split(data, "\n") do
+      call_callback(line, state)
+    end
+    {:noreply, state}
   end
 
-  def handle_info({_port, {:data, {:eol, data}}}, state) do
-    [path, flags] = String.split(List.to_string(data), << 0 >>)
+  def handle_info({:stderr, _pid, data}, state) do
+    Logger.warn("Got warning or error while watching file: #{inspect data}")
+    {:noreply, state}
+  end
+
+
+  def call_callback("", _state) do
+  end
+  def call_callback(data, state) do
+    [path, flags] = String.split(data, << 0 >>)
     flags = flags |> String.split(",")
+
     if Enum.member?(flags, "Updated") do
       state.callback.(path)
     end
-    {:noreply, state}
-  end
-
-  def handle_info(msg, state) do
-    Logger.warn("Unhandled message #{inspect msg}")
-    {:noreply, state}
-  end
-
-  def terminate(:port_already_closed, _state) do
-    :ok
-  end
-  def terminate(_reason, state) do
-    Port.close(state.port)
-    :ok
   end
 end

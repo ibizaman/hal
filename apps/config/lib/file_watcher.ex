@@ -39,18 +39,13 @@ defmodule FileWatcher.Watcher do
   end
 
   def init({paths, callback}) do
-    args = [Application.get_env(:config, :filewatcher_exec),
-            "--format=%p%0%f",
-            "--event-flag-separator=,"
-            | paths]
-          |> Enum.join(" ")
-          |> String.to_char_list
-    options = [:stdout,
-               :stderr,
-               env: [{'LD_LIBRARY_PATH', Application.get_env(:config, :filewatcher_sharelib) |> String.to_char_list}]]
+    result =
+      with {:ok, exec_path} <- exec,
+           {:ok, paths} <- watch(exec_path, Application.get_env(:config, :filewatcher_sharelib), paths),
+        do: {:ok, paths}
 
-    case :exec.run_link(args, options) do
-      {:ok, _pid, _ospid} -> {:ok, %{paths: paths, callback: callback}}
+    case result do
+      {:ok, paths} -> {:ok, %{paths: paths, callback: callback}}
       {:error, reason} -> {:stop, "Could not watch files #{inspect paths}: #{inspect reason}"}
     end
   end
@@ -77,6 +72,32 @@ defmodule FileWatcher.Watcher do
 
     if Enum.member?(flags, "Updated") do
       state.callback.(path)
+    end
+  end
+
+
+  defp watch(exec_path, shared_lib_paths, paths) do
+    args = [exec_path,
+            "--format=%p%0%f",
+            "--event-flag-separator=,"
+            | paths]
+          |> Enum.join(" ")
+          |> String.to_char_list
+    options = [:stdout,
+               :stderr,
+               env: [{'LD_LIBRARY_PATH', shared_lib_paths |> String.to_char_list}]]
+
+    case :exec.run_link(args, options) do
+      {:ok, _pid, _ospid} -> {:ok, paths}
+      {:error, reason} -> {:stop, "Could not watch files #{inspect paths}: #{inspect reason}"}
+    end
+  end
+
+  defp exec() do
+    paths = Application.get_env(:config, :filewatcher_exec)
+    case paths |> Enum.filter(&File.regular?/1) do
+      [] -> {:error, "No file found in #{inspect paths}"}
+      [path | _] -> {:ok, path}
     end
   end
 end

@@ -28,7 +28,7 @@ end
 
 defmodule FileWatcher.Watcher do
   use GenServer
-  import Logger
+  require Logger
 
   def start_link(paths, callback) do
     GenServer.start_link(__MODULE__, {paths, callback})

@@ -31,7 +31,7 @@ end
 
 defmodule Config.Worker do
   use GenServer
-  import Logger
+  require Logger
 
   def start_link(config_paths) do
     GenServer.start_link(__MODULE__, config_paths, name: __MODULE__)

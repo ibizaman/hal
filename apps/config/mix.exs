@@ -15,12 +15,13 @@ defmodule Config.Mixfile do
   end
 
   def application do
-    [applications: [:logger, :erlexec],
+    [applications: [:logger, :poison, :erlexec],
      mod: {Config, []}]
   end
 
   defp deps do
     [
+      {:exrm, "1.0.6"},
       {:poison, "~> 2.0"},
       {:erlexec, github: "saleyn/erlexec", tag: "1.2.1"}
     ]

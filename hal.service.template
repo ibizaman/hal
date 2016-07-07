@@ -1,0 +1,14 @@
+[Unit]
+Description="HAL Handles everything"
+
+[Service]
+Type=forking
+TimeoutSet=120
+ExecStart=$dest/bin/network start
+ExecStop=$dest/bin/network stop
+Environment=HOME=$dest
+WorkingDirectory=$dest
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

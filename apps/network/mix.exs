@@ -15,12 +15,13 @@ defmodule Network.Mixfile do
   end
 
   def application do
-    [applications: [:config, :alert, :httpoison],
+    [applications: [:config, :alert, :poison, :httpoison],
      mod: {Network, []}]
   end
 
   defp deps do
     [
+      {:exrm, "1.0.6"},
       {:alert, in_umbrella: true},
       {:config, in_umbrella: true},
       {:poison, "~> 2.0"},

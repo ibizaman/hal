@@ -15,12 +15,13 @@ defmodule Alert.Mixfile do
   end
 
   def application do
-    [applications: [:config, :httpoison, :poolboy],
+    [applications: [:config, :poison, :httpoison, :poolboy],
      mod: {Alert, []}]
   end
 
   defp deps do
     [
+      {:exrm, "1.0.6"},
       {:config, in_umbrella: true},
       {:poolboy, "~> 1.5"},
       {:poison, "~> 2.0"},
